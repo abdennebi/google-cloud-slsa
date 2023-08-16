@@ -1,4 +1,4 @@
-name: projects/s3cme1/policy
+name: projects/k8s-istio-playground/policy
 defaultAdmissionRule:
   enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
   evaluationMode: ALWAYS_ALLOW
@@ -7,16 +7,16 @@ clusterAdmissionRules:
     enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
     evaluationMode: REQUIRE_ATTESTATION
     requireAttestationsBy:
-    - projects/s3cme1/attestors/built-by-cloud-build
-    - projects/s3cme1/attestors/vulnz-attestor
-    - projects/s3cme1/attestors/sbom-attestor
+    - projects/k8s-istio-playground/attestors/built-by-cloud-build
+    - projects/k8s-istio-playground/attestors/vulnz-attestor
+    - projects/k8s-istio-playground/attestors/sbom-attestor
   us-west1-c.demo-test:
     enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
     evaluationMode: REQUIRE_ATTESTATION
     requireAttestationsBy:
-    - projects/s3cme1/attestors/built-by-cloud-build
-    - projects/s3cme1/attestors/vulnz-attestor
-    - projects/s3cme1/attestors/sbom-attestor
+    - projects/k8s-istio-playground/attestors/built-by-cloud-build
+    - projects/k8s-istio-playground/attestors/vulnz-attestor
+    - projects/k8s-istio-playground/attestors/sbom-attestor
 admissionWhitelistPatterns:
 - namePattern: us.gcr.io/google-containers/**
 - namePattern: gcr.io/google_containers/**
