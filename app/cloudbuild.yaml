@@ -14,9 +14,8 @@ steps:
     entrypoint: go
     dir: app
     args:
-    - -c
     - |
-      go test -short -count=1 -race -covermode=atomic -coverprofile=cover.out ./...
+      -short -count=1 -race -covermode=atomic -coverprofile=cover.out ./...
 
   # Build image
   - id: build
@@ -25,9 +24,8 @@ steps:
     - test
     dir: app
     args:
-    - -c
     - |
-      docker build --build-arg VERSION=${TAG_NAME} \
+      build --build-arg VERSION=${TAG_NAME} \
         -t "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${COMMIT_SHA}" \
         -t "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}" \
         .
@@ -40,12 +38,21 @@ steps:
     - build
     dir: app
     args:
-    - -c
     - |-
-      docker push "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}"
+      push "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}"
       docker image inspect "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}" \
         --format '{{index .RepoDigests 0}}' > image-digest.txt
       cat image-digest.txt
+
+  - id: inspect
+    name: docker
+    waitFor: 
+    - publish
+    dir: app
+    args:
+    - |-
+      image inspect "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}" \
+        --format '{{index .RepoDigests 0}}' > image-digest.txt
 
   # Generate Software Bill of Materials (SBOM).
   # Generate SBOM file for all image layers in JSON format (SPDX schema), 
@@ -55,7 +62,7 @@ steps:
     name: us-docker.pkg.dev/s3cme1/builders/sbominator@sha256:d5336ddf0897758f641be4e5fa5c8de299289d4adca6388e9f820833c83706cb
     entrypoint: /bin/bash
     waitFor:
-    - publish
+    - inspect
     dir: app
     env:
     - PROJECT=$PROJECT_ID
