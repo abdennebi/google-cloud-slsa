@@ -8,24 +8,27 @@ steps:
 
   # Go test
   - id: test
-    name: golang
+    name: us-west1-docker.pkg.dev/s3cme1/docker/golang@sha256:cfc9d1b07b1ef4f7a4571f0b60a99646a92ef76adb7d9943f4cb7b606c6554e2
     env:
     - GO111MODULE=on
-    entrypoint: go
+    entrypoint: /bin/bash
     dir: app
     args:
+    - -c
     - |
-      -short -count=1 -race -covermode=atomic -coverprofile=cover.out ./...
+      go test -short -count=1 -race -covermode=atomic -coverprofile=cover.out ./...
 
   # Build image
   - id: build
-    name: docker
+    name: gcr.io/cloud-builders/docker@sha256:1fe0557459fea8552d5ce57bb77aaf238139bd69131d670e152e68358f6cb13c
+    entrypoint: /bin/bash
     waitFor:
     - test
     dir: app
     args:
+    - -c
     - |
-      build --build-arg VERSION=${TAG_NAME} \
+      docker build --build-arg VERSION=${TAG_NAME} \
         -t "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${COMMIT_SHA}" \
         -t "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}" \
         .
@@ -33,26 +36,18 @@ steps:
   # Publish image, get digest, and save it to file.
   # Digest because tags aren't (really) cryptographically verifiable.
   - id: publish
-    name: docker
+    name: gcr.io/cloud-builders/docker@sha256:1fe0557459fea8552d5ce57bb77aaf238139bd69131d670e152e68358f6cb13c
+    entrypoint: /bin/bash
     waitFor: 
     - build
     dir: app
     args:
+    - -c
     - |-
-      push "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}"
+      docker push "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}"
       docker image inspect "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}" \
         --format '{{index .RepoDigests 0}}' > image-digest.txt
       cat image-digest.txt
-
-  - id: inspect
-    name: docker
-    waitFor: 
-    - publish
-    dir: app
-    args:
-    - |-
-      image inspect "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}" \
-        --format '{{index .RepoDigests 0}}' > image-digest.txt
 
   # Generate Software Bill of Materials (SBOM).
   # Generate SBOM file for all image layers in JSON format (SPDX schema), 
@@ -62,7 +57,7 @@ steps:
     name: us-docker.pkg.dev/s3cme1/builders/sbominator@sha256:d5336ddf0897758f641be4e5fa5c8de299289d4adca6388e9f820833c83706cb
     entrypoint: /bin/bash
     waitFor:
-    - inspect
+    - publish
     dir: app
     env:
     - PROJECT=$PROJECT_ID
@@ -100,7 +95,8 @@ steps:
   # Attest image with BinAuthz (attestation to X)
   # Future: Could be unnecessary, given SBOM/Provenance/Vulnerability-based policy checks
   - id: attest
-    name: gcloud
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk@sha256:abe63daaa5a79e06c0e423b893237786dd221a4518a22c4b7cb5c2acc2836497
+    entrypoint: /bin/bash
     waitFor:
     - sbom
     - scan
@@ -114,7 +110,8 @@ steps:
 
   # Create release in Google Cloud Deploy
   - id: release
-    name: gcloud
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk@sha256:abe63daaa5a79e06c0e423b893237786dd221a4518a22c4b7cb5c2acc2836497
+    entrypoint: /bin/bash
     waitFor:
     - attest
     dir: app
