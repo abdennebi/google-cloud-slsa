@@ -15,7 +15,7 @@ if [[ -z "${ACCOUNT}" ]]; then
 fi;
 
 if [[ -z "${REGION}" ]]; then
-  export REGION="us-west1"
+  export REGION="europe-west1"
 fi;
 
 # derived vars 
@@ -27,7 +27,7 @@ export CLUSTER_NAME="demo"
 export CLUSTER_NODE_MACHINE_TYPE="e2-medium"
 export CLUSTER_RELEASE_CHANNEL="rapid"
 export CLUSTER_SIZE="3"
-export CLUSTER_ZONE="${REGION}-c"
+export CLUSTER_ZONE="${REGION}-b"
 
 # pipeline variables
 export REGISTRY_NAME="sds-demo"
