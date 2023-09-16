@@ -1,4 +1,4 @@
-module mchmarny/demoapp
+module abdennebi/demoapp
 
 go 1.20
 
