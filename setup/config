@@ -30,7 +30,7 @@ export CLUSTER_SIZE="3"
 export CLUSTER_ZONE="${REGION}-b"
 
 # pipeline variables
-export REGISTRY_NAME="hello-slsa"
+export REGISTRY_NAME="google-cloud-slsa"
 
 # binary authorization variables
 export KMS_RING_NAME="binauthz"
