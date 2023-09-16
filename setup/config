@@ -23,14 +23,14 @@ export PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='valu
 export CLOUD_BUILD_SA_EMAIL="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
 
 # cluster variables
-export CLUSTER_NAME="demo"
+export CLUSTER_NAME="hello"
 export CLUSTER_NODE_MACHINE_TYPE="e2-medium"
 export CLUSTER_RELEASE_CHANNEL="rapid"
 export CLUSTER_SIZE="3"
 export CLUSTER_ZONE="${REGION}-b"
 
 # pipeline variables
-export REGISTRY_NAME="google-cloud-binauthz-slsa"
+export REGISTRY_NAME="hello-slsa"
 
 # binary authorization variables
 export KMS_RING_NAME="binauthz"

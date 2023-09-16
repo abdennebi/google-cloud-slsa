@@ -132,8 +132,8 @@ options:
   # Otherwise, GCB generates provenance for global builds only.
   requestedVerifyOption: VERIFIED
   sourceProvenanceHash: ["SHA256"]
-  pool:
-    name: 'projects/$PROJECT_ID/locations/$LOCATION/workerPools/$_POOL_NAME'
+  # pool:
+  #   name: 'projects/$PROJECT_ID/locations/$LOCATION/workerPools/$_POOL_NAME'
 
 tags:
 - demo

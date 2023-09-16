@@ -5,24 +5,24 @@ metadata:
 description: Security-focused CI/CD pipeline on GCP
 serialPipeline:
  stages:
- - targetId: demo-test
- - targetId: demo-prod
+ - targetId: hello-test
+ - targetId: hello-prod
 ---
 
 apiVersion: deploy.cloud.google.com/v1
 kind: Target
 metadata:
-  name: demo-test
+  name: hello-test
 description: test cluster
 gke:
-  cluster: projects/k8s-istio-playground/locations/europe-west1-b/clusters/demo-test
+  cluster: projects/k8s-istio-playground/locations/europe-west1-b/clusters/hello-test
 ---
 
 apiVersion: deploy.cloud.google.com/v1
 kind: Target
 metadata:
-  name: demo-prod
+  name: hello-prod
 description: prod cluster
 requireApproval: true
 gke:
-  cluster: projects/k8s-istio-playground/locations/europe-west1-b/clusters/demo-prod
+  cluster: projects/k8s-istio-playground/locations/europe-west1-b/clusters/hello-prod

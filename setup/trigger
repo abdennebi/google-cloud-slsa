@@ -7,7 +7,7 @@ set -o errexit
 set -o pipefail
 
 REPO_OWNER=$1
-REPO_NAME=${2:-google-cloud-binauthz-slsa}
+REPO_NAME=${2:-google-cloud-slsa}
 
 if [[ -z "$REPO_OWNER" ]]; then
   echo "Usage $0 <your-github-username>"
@@ -27,15 +27,15 @@ export NOTE_LOCATION=$(curl -s "https://containeranalysis.googleapis.com/v1/proj
   | jq --raw-output '.name')
 
 
-gcloud beta builds worker-pools create demo-pool \
-  --region $REGION \
-  --project $PROJECT_ID \
-  --worker-machine-type e2-standard-2 \
-  --worker-disk-size 100GB
+# gcloud beta builds worker-pools create demo-pool \
+#   --region $REGION \
+#   --project $PROJECT_ID \
+#   --worker-machine-type e2-standard-2 \
+#   --worker-disk-size 100GB
 
 
 gcloud beta builds triggers create github \
-  --name demo-trigger \
+  --name hello-app-trigger \
   --region $REGION \
   --project $PROJECT_ID \
   --repo-name $REPO_NAME \

@@ -3,14 +3,14 @@ defaultAdmissionRule:
   enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
   evaluationMode: ALWAYS_ALLOW
 clusterAdmissionRules:
-  europe-west1-b.demo-prod:
+  europe-west1-b.hello-prod:
     enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
     evaluationMode: REQUIRE_ATTESTATION
     requireAttestationsBy:
     - projects/k8s-istio-playground/attestors/built-by-cloud-build
     - projects/k8s-istio-playground/attestors/vulnz-attestor
     - projects/k8s-istio-playground/attestors/sbom-attestor
-  europe-west1-b.demo-test:
+  europe-west1-b.hello-test:
     enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
     evaluationMode: REQUIRE_ATTESTATION
     requireAttestationsBy:
