@@ -1,0 +1,14 @@
+gkePolicy:
+  checkSets:
+  - checks:
+    - displayName: SLSA check
+      imageAllowlist:
+      slsaCheck:
+        rules:
+        - attestationSource:
+            containerAnalysisAttestationProjects:
+            - projects/k8s-istio-playground
+          configBasedBuildRequired: true
+          trustedBuilder: GOOGLE_CLOUD_BUILD
+          trustedSourceRepoPatterns:
+          - github.com/abdennebi/google-cloud-slsa
