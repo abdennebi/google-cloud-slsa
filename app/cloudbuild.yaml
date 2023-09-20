@@ -48,34 +48,7 @@ steps:
       docker image inspect "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}" \
         --format '{{index .RepoDigests 0}}' > image-digest.txt
       cat image-digest.txt
-
-  # Generate Software Bill of Materials (SBOM).
-  # Generate SBOM file for all image layers in JSON format (SPDX schema), 
-  # and creates attestation for that container image with the SBOM as predicate
-  # Future: Automatically SBOM generation in CA. 
-  # - id: sbom
-  #   name: us-docker.pkg.dev/s3cme1/builders/sbominator@sha256:d5336ddf0897758f641be4e5fa5c8de299289d4adca6388e9f820833c83706cb
-  #   entrypoint: /bin/bash
-  #   waitFor:
-  #   - publish
-  #   dir: app
-  #   env:
-  #   - PROJECT=$PROJECT_ID
-  #   - KEY=$_KMS_KEY_NAME
-  #   - COMMIT=$COMMIT_SHA
-  #   - VERSION=$TAG_NAME
-  #   - ATTESTOR=$_BIN_AUTHZ_ID
-  #   args:
-  #   - -c
-  #   - |-
-  #     builder $(cat image-digest.txt)
-
-  # Test against my vulnerability policy.
-  # For stability of the demo uses a pre-built image.
-  # See the grafeas/kritis for instruction on how to build your own signer.
-  # https://github.com/grafeas/kritis/blob/master/docs/signer.md
-  # Check-based policies
-  # Future: Call to check-based policy API in BinAuthz (consistent controls)
+      
   - id: scan
     name: us-docker.pkg.dev/s3cme1/builders/kritis-signer@sha256:b6d76a209a79a7409e552f81e3a362fc92688f91ab1b67cedf014ee5a03cd97a
     entrypoint: /bin/bash
