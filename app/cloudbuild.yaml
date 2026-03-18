@@ -8,7 +8,7 @@ steps:
 
   # Go test
   - id: test
-    name: us-west1-docker.pkg.dev/s3cme1/docker/golang@sha256:cfc9d1b07b1ef4f7a4571f0b60a99646a92ef76adb7d9943f4cb7b606c6554e2
+    name: golang@sha256:d2d2bc1c84f7e60d7d2438a3836ae7d0c847f4888464e7ec9ba3a1339a1ee804
     env:
     - GO111MODULE=on
     entrypoint: /bin/bash
