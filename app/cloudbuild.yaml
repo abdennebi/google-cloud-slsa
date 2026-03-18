@@ -50,7 +50,7 @@ steps:
       cat image-digest.txt
       
   - id: scan
-    name: us-docker.pkg.dev/s3cme1/builders/kritis-signer
+    name: us-docker.pkg.dev/s3cme1/builders/kritis-signer@sha256:b6d76a209a79a7409e552f81e3a362fc92688f91ab1b67cedf014ee5a03cd97a
     entrypoint: /bin/bash
     waitFor:
     - publish
