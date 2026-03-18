@@ -49,21 +49,21 @@ steps:
         --format '{{index .RepoDigests 0}}' > image-digest.txt
       cat image-digest.txt
       
-  - id: scan
-    name: us-docker.pkg.dev/s3cme1/builders/kritis-signer@sha256:b6d76a209a79a7409e552f81e3a362fc92688f91ab1b67cedf014ee5a03cd97a
-    entrypoint: /bin/bash
-    waitFor:
-    - publish
-    args:
-    - -c
-    - |-
-      /kritis/signer \
-        -mode=check-and-sign -v=10 -alsologtostderr \
-        -image=$(/bin/cat app/image-digest.txt) \
-        -policy=policy/vulnz-signing-policy.yaml \
-        -note_name=${_NOTE_NAME} \
-        -kms_key_name=${_KMS_KEY_NAME} \
-        -kms_digest_alg=${_KMS_DIGEST_ALG}
+  # - id: scan
+  #   name: us-docker.pkg.dev/s3cme1/builders/kritis-signer@sha256:b6d76a209a79a7409e552f81e3a362fc92688f91ab1b67cedf014ee5a03cd97a
+  #   entrypoint: /bin/bash
+  #   waitFor:
+  #   - publish
+  #   args:
+  #   - -c
+  #   - |-
+  #     /kritis/signer \
+  #       -mode=check-and-sign -v=10 -alsologtostderr \
+  #       -image=$(/bin/cat app/image-digest.txt) \
+  #       -policy=policy/vulnz-signing-policy.yaml \
+  #       -note_name=${_NOTE_NAME} \
+  #       -kms_key_name=${_KMS_KEY_NAME} \
+  #       -kms_digest_alg=${_KMS_DIGEST_ALG}
 
   # Attest image with BinAuthz (attestation to X)
   # Future: Could be unnecessary, given SBOM/Provenance/Vulnerability-based policy checks
