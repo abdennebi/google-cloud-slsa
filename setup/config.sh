@@ -20,7 +20,7 @@ fi;
 
 # derived vars 
 export PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
-export CLOUD_BUILD_SA_EMAIL="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
+export CLOUD_BUILD_SA_EMAIL="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
 # cluster variables
 export CLUSTER_NAME="hello"
