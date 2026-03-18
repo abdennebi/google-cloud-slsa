@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR="$(dirname "$0")"
-. "${DIR}/config"
+. "${DIR}/config.sh"
 
 set -o errexit
 set -o pipefail
@@ -11,6 +11,6 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member serviceAccount:$PROJECT_NUMBER@cloudbuild.gserviceaccount.com \
     --role roles/artifactregistry.reader --condition None
 
-setup/cluster "${CLUSTER_NAME}-test"
-setup/cluster "${CLUSTER_NAME}-prod"
+setup/cluster.sh "${CLUSTER_NAME}-test"
+setup/cluster.sh "${CLUSTER_NAME}-prod"
 

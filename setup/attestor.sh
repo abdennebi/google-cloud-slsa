@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR="$(dirname "$0")"
-. "${DIR}/config"
+. "${DIR}/confi.sh"
 
 set -o errexit
 set -o pipefail

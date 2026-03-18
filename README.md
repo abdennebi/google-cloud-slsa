@@ -46,19 +46,19 @@ export PROJECT_ID=<your-project-id-here>
 Next, create the required GCP resources (KMS, Artifact Registry repo, and service account policies):
 
 ```shell
-setup/init
+setup/init.sh
 ```
 
 Create GKE cluster:
 
 ```shell
-setup/clusters
+setup/clusters.sh
 ```
 
 And, configure Binary Authorization:
 
 ```shell
-setup/binauthz
+setup/binauthz.sh
 ```
 
 Next, trust all Google-provided system images in UI (bottom):
@@ -105,7 +105,7 @@ Create the GCP worker pool and the trigger on tag in the cloned app repo:
 > Make sure to replace the `your-github-username` with your GitHub username.
 
 ```shell
-setup/trigger <your-github-username>
+setup/trigger.sh <your-github-username>
 ```
 
 Check that the trigger has been created: 
@@ -133,7 +133,7 @@ https://console.cloud.google.com/cloud-build/settings/service-account
 Deploy sample image that **was not built in GCP**. First, get the configuration with which the demo clusters were configured:
 
 ```shell
-. setup/config
+. setup/config.sh
 ```
 
 Next, get the `test` cluster credentials:
@@ -271,7 +271,7 @@ cosign verify-attestation --type spdxjson \
 ## Cleanup 
 
 ```shell
-setup/delete
+setup/delete.sh
 ```
 
 ## Disclaimer
