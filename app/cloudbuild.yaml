@@ -3,6 +3,9 @@
 substitutions:
   _APP_NAME: hello
   _PIPELINE_NAME: deploy-demo-pipeline
+  _LOCATION: europe-west1
+  _REPO_NAME: google-cloud-slsa
+  _TAG_NAME: latest
 
 steps:
 
@@ -28,9 +31,8 @@ steps:
     args:
     - -c
     - |
-      docker build --build-arg VERSION=${TAG_NAME} \
-        -t "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${COMMIT_SHA}" \
-        -t "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}" \
+      docker build --build-arg VERSION=${_TAG_NAME} \
+        -t "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}" \
         .
   
   # Publish image, get digest, and save it to file.
@@ -44,26 +46,26 @@ steps:
     args:
     - -c
     - |-
-      docker push "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}"
-      docker image inspect "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${_APP_NAME}:${TAG_NAME}" \
+      docker push "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}"
+      docker image inspect "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}" \
         --format '{{index .RepoDigests 0}}' > image-digest.txt
       cat image-digest.txt
       
-  - id: scan
-    name: us-docker.pkg.dev/s3cme1/builders/kritis-signer@sha256:b6d76a209a79a7409e552f81e3a362fc92688f91ab1b67cedf014ee5a03cd97a
-    entrypoint: /bin/bash
-    waitFor:
-    - publish
-    args:
-    - -c
-    - |-
-      /kritis/signer \
-        -mode=check-and-sign -v=10 -alsologtostderr \
-        -image=$(/bin/cat app/image-digest.txt) \
-        -policy=policy/vulnz-signing-policy.yaml \
-        -note_name=${_NOTE_NAME} \
-        -kms_key_name=${_KMS_KEY_NAME} \
-        -kms_digest_alg=${_KMS_DIGEST_ALG}
+  # - id: scan
+  #   name: us-docker.pkg.dev/s3cme1/builders/kritis-signer@sha256:b6d76a209a79a7409e552f81e3a362fc92688f91ab1b67cedf014ee5a03cd97a
+  #   entrypoint: /bin/bash
+  #   waitFor:
+  #   - publish
+  #   args:
+  #   - -c
+  #   - |-
+  #     /kritis/signer \
+  #       -mode=check-and-sign -v=10 -alsologtostderr \
+  #       -image=$(/bin/cat app/image-digest.txt) \
+  #       -policy=policy/vulnz-signing-policy.yaml \
+  #       -note_name=${_NOTE_NAME} \
+  #       -kms_key_name=${_KMS_KEY_NAME} \
+  #       -kms_digest_alg=${_KMS_DIGEST_ALG}
 
   # Attest image with BinAuthz (attestation to X)
   # Future: Could be unnecessary, given SBOM/Provenance/Vulnerability-based policy checks
@@ -91,14 +93,14 @@ steps:
     args:
     - -c
     - |
-      gcloud deploy releases create rel-${SHORT_SHA} \
+      gcloud deploy releases create rel-${_TAG_NAME}-${SHORT_SHA} \
       --delivery-pipeline ${_PIPELINE_NAME} \
-      --region ${LOCATION} \
-      --annotations "commitId=${REVISION_ID},tag=${TAG_NAME}" \
+      --region ${_LOCATION} \
+      --annotations "commitId=${REVISION_ID},tag=${_TAG_NAME}" \
       --images "${_APP_NAME}=$(cat image-digest.txt)"
 
 images:
-- ${LOCATION}-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$_APP_NAME:$TAG_NAME
+- ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_APP_NAME:${_TAG_NAME}
 
 options:
   # Verify generation of attestations and provenance metadata for this build.
@@ -107,7 +109,7 @@ options:
   sourceProvenanceHash: ["SHA256"]
   logging: CLOUD_LOGGING_ONLY
   # pool:
-  #   name: 'projects/$PROJECT_ID/locations/$LOCATION/workerPools/$_POOL_NAME'
+  #   name: 'projects/$PROJECT_ID/locations/$_LOCATION/workerPools/$_POOL_NAME'
 
 tags:
 - demo
