@@ -1,3 +1,5 @@
+## Ce projet est un fork de  mchmarny/sds-demo
+
 # GCP Secure CI/CD Pipeline Demo
 
 This repo bootstraps a CI/CD pipeline on Google Cloud to demonstrate policy controls for container image provenance, and for GKE authorization based on attestation. What's included:
