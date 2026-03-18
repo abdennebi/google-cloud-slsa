@@ -42,7 +42,7 @@ gcloud beta builds triggers create github \
   --project $PROJECT_ID \
   --repo-name $REPO_NAME \
   --repo-owner $REPO_OWNER \
-  --tag-pattern "ˆv.*" \
+  --tag-pattern "^v.*" \
   --substitutions "_KMS_DIGEST_ALG=SHA512,_KMS_KEY_NAME=${KEY_NAME}/cryptoKeyVersions/1,_NOTE_NAME=${NOTE_LOCATION},_BIN_AUTHZ_ID=projects/${PROJECT_ID}/attestors/${SBOM_ATTESTOR_ID},_POOL_NAME=demo-pool" \
   --service-account "projects/$PROJECT_ID/serviceAccounts/$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
   --build-config "app/cloudbuild.yaml"
