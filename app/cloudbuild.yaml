@@ -93,7 +93,8 @@ steps:
     args:
     - -c
     - |
-      gcloud deploy releases create rel-${_TAG_NAME}-${SHORT_SHA} \
+      CLEAN_TAG=$$(echo ${_TAG_NAME} | sed 's/\./-/g')
+      gcloud deploy releases create rel-$${CLEAN_TAG} \
       --delivery-pipeline ${_PIPELINE_NAME} \
       --region ${_LOCATION} \
       --annotations "commitId=${REVISION_ID},tag=${_TAG_NAME}" \
