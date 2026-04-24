@@ -93,7 +93,7 @@ steps:
       gcloud beta container binauthz attestations sign-and-create \
         --artifact-url="$(cat image-digest.txt)" \
         --attestor="projects/${PROJECT_ID}/attestors/${_VULN_ATTESTOR_ID}" \
-        --keyversion="projects/${PROJECT_ID}/locations/${_LOCATION}/keyRings/${_KMS_RING_NAME}/cryptoKeys/${_KMS_KEY_NAME}/cryptoKeyVersions/${_KMS_KEY_VERSION}"
+        --keyversion="${_KMS_KEY_NAME}"
 
   # Attest image – Built by Cloud Build
   - id: attest-gcb
@@ -108,7 +108,7 @@ steps:
       gcloud beta container binauthz attestations sign-and-create \
         --artifact-url="$(cat image-digest.txt)" \
         --attestor="projects/${PROJECT_ID}/attestors/${_GCB_ATTESTOR_ID}" \
-        --keyversion="projects/${PROJECT_ID}/locations/${_LOCATION}/keyRings/${_KMS_RING_NAME}/cryptoKeys/${_KMS_KEY_NAME}/cryptoKeyVersions/${_KMS_KEY_VERSION}"
+        --keyversion="${_KMS_KEY_NAME}"
 
   # Generate SBOM and attest
   - id: attest-sbom
@@ -130,7 +130,7 @@ steps:
       gcloud beta container binauthz attestations sign-and-create \
         --artifact-url="$(cat image-digest.txt)" \
         --attestor="projects/${PROJECT_ID}/attestors/${_SBOM_ATTESTOR_ID}" \
-        --keyversion="projects/${PROJECT_ID}/locations/${_LOCATION}/keyRings/${_KMS_RING_NAME}/cryptoKeys/${_KMS_KEY_NAME}/cryptoKeyVersions/${_KMS_KEY_VERSION}"
+        --keyversion="${_KMS_KEY_NAME}"
 
   # Create release in Google Cloud Deploy
   - id: release
