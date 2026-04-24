@@ -23,7 +23,8 @@ gcloud services enable \
   containerscanning.googleapis.com \
   containersecurity.googleapis.com \
   run.googleapis.com \
-  servicenetworking.googleapis.com
+  servicenetworking.googleapis.com \
+  ondemandscanning.googleapis.com
 
 # configue defaults
 gcloud config set artifacts/location $REGION

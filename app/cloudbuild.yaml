@@ -6,6 +6,10 @@ substitutions:
   _LOCATION: europe-west1
   _REPO_NAME: google-cloud-slsa
   _TAG_NAME: latest
+  _VULN_ATTESTOR_ID: vulnz-attestor
+  _KMS_RING_NAME: binauthz
+  _KMS_KEY_NAME: binauthz-signer
+  _KMS_KEY_VERSION: "1"
 
 steps:
 
@@ -51,40 +55,8 @@ steps:
         --format '{{index .RepoDigests 0}}' > image-digest.txt
       cat image-digest.txt
       
-  # - id: scan
-  #   name: us-docker.pkg.dev/s3cme1/builders/kritis-signer@sha256:b6d76a209a79a7409e552f81e3a362fc92688f91ab1b67cedf014ee5a03cd97a
-  #   entrypoint: /bin/bash
-  #   waitFor:
-  #   - publish
-  #   args:
-  #   - -c
-  #   - |-
-  #     /kritis/signer \
-  #       -mode=check-and-sign -v=10 -alsologtostderr \
-  #       -image=$(/bin/cat app/image-digest.txt) \
-  #       -policy=policy/vulnz-signing-policy.yaml \
-  #       -note_name=${_NOTE_NAME} \
-  #       -kms_key_name=${_KMS_KEY_NAME} \
-  #       -kms_digest_alg=${_KMS_DIGEST_ALG}
-
-  # Attest image with BinAuthz (attestation to X)
-  # Future: Could be unnecessary, given SBOM/Provenance/Vulnerability-based policy checks
-  # - id: attest
-  #   name: gcr.io/google.com/cloudsdktool/cloud-sdk@sha256:abe63daaa5a79e06c0e423b893237786dd221a4518a22c4b7cb5c2acc2836497
-  #   entrypoint: /bin/bash
-  #   waitFor:
-  #   - sbom
-  #   - scan
-  #   args:
-  #   - -c
-  #   - |-
-  #     gcloud beta container binauthz attestations sign-and-create \
-  #       --attestor projects/${PROJECT_ID}/attestors/built-by-cloud-build \
-  #       --artifact-url $(cat app/image-digest.txt) \
-  #       --keyversion ${_KMS_KEY_NAME}
-
-  # Create release in Google Cloud Deploy
-  - id: release
+  # Vulnerability Scan
+  - id: scan
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: /bin/bash
     waitFor:
@@ -93,8 +65,52 @@ steps:
     args:
     - -c
     - |
+      gcloud artifacts docker images scan "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}" \
+        --format='value(response.scan)' > /workspace/scan_id.txt
+
+  # Attest image with BinAuthz (Vulnerability Attestation)
+  - id: attest-vulnz
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    waitFor:
+    - scan
+    dir: app
+    args:
+    - -c
+    - |
+      # Check scan results for CRITICAL or HIGH vulnerabilities
+      VULNZ=$(gcloud artifacts docker images list-vulnerabilities $(cat /workspace/scan_id.txt) \
+        --format="value(vulnerability.effectiveSeverity)" | grep -E "CRITICAL|HIGH" | wc -l)
+
+      if [ "$${VULNZ}" -gt 0 ]; then
+        echo "Scan failed: $${VULNZ} HIGH/CRITICAL vulnerabilities found."
+        exit 1
+      fi
+
+      # Sign and create BinAuthz attestation
+      gcloud beta container binauthz attestations sign-and-create \
+        --artifact-url="$(cat image-digest.txt)" \
+        --attestor="projects/${PROJECT_ID}/attestors/${_VULN_ATTESTOR_ID}" \
+        --keyversion="projects/${PROJECT_ID}/locations/${_LOCATION}/keyRings/${_KMS_RING_NAME}/cryptoKeys/${_KMS_KEY_NAME}/cryptoKeyVersions/${_KMS_KEY_VERSION}"
+
+  # Create release in Google Cloud Deploy
+  - id: release
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    waitFor:
+    - attest-vulnz
+    dir: app
+    args:
+    - -c
+    - |
       CLEAN_TAG=$$(echo ${_TAG_NAME} | sed 's/\./-/g')
-      gcloud deploy releases create rel-$${CLEAN_TAG} \
+      # Use SHORT_SHA or BUILD_ID to ensure uniqueness
+      # If SHORT_SHA is empty, we use a truncated BUILD_ID
+      SUFFIX="${SHORT_SHA}"
+      if [ -z "$${SUFFIX}" ]; then
+        SUFFIX=$$(echo ${BUILD_ID} | cut -c1-8)
+      fi
+      gcloud deploy releases create rel-$${CLEAN_TAG}-$${SUFFIX} \
       --delivery-pipeline ${_PIPELINE_NAME} \
       --region ${_LOCATION} \
       --annotations "commitId=${REVISION_ID},tag=${_TAG_NAME}" \

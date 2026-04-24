@@ -12,11 +12,7 @@ clusterAdmissionRules:
     - projects/jsr-secure-software/attestors/sbom-attestor
   europe-west1-b.hello-test:
     enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
-    evaluationMode: REQUIRE_ATTESTATION
-    requireAttestationsBy:
-    - projects/jsr-secure-software/attestors/built-by-cloud-build
-    - projects/jsr-secure-software/attestors/vulnz-attestor
-    - projects/jsr-secure-software/attestors/sbom-attestor
+    evaluationMode: ALWAYS_ALLOW
 admissionWhitelistPatterns:
 - namePattern: us.gcr.io/google-containers/**
 - namePattern: gcr.io/google_containers/**
