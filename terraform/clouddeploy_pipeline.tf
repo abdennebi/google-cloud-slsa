@@ -33,7 +33,7 @@ resource "google_clouddeploy_target" "hello" {
   require_approval = each.key == "prod"
 
   gke {
-    cluster = "projects/${var.project_id}/locations/${local.cluster_zone}/clusters/${each.value}"
+    cluster = "projects/${var.project_id}/locations/${var.region}/clusters/${each.value}"
   }
 
   depends_on = [google_container_cluster.clusters]

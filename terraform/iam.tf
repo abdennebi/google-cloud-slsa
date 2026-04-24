@@ -21,6 +21,25 @@ locals {
     "roles/clouddeploy.jobRunner",
     "roles/container.developer",
   ]
+
+  # Rôles nécessaires pour exécuter les steps Cloud Build via le trigger
+  # (le trigger utilise clouddeploy-runner comme SA)
+  cloudbuild_trigger_roles = [
+    "roles/containeranalysis.notes.editor",
+    "roles/containeranalysis.notes.occurrences.viewer",
+    "roles/containeranalysis.occurrences.editor",
+    "roles/binaryauthorization.attestorsViewer",
+    "roles/cloudkms.cryptoKeyDecrypter",
+    "roles/cloudkms.signerVerifier",
+    "roles/cloudkms.viewer",
+    "roles/containeranalysis.notes.attacher",
+    "roles/artifactregistry.writer",
+    "roles/logging.logWriter",
+    "roles/storage.objectViewer",
+    "roles/ondemandscanning.admin",
+    "roles/clouddeploy.operator",
+    "roles/storage.admin",
+  ]
 }
 
 resource "google_project_iam_member" "cloudbuild_sa" {
@@ -39,6 +58,16 @@ resource "google_project_iam_member" "cloudbuild_sa" {
 # ---------------------------------------------------------------------------
 resource "google_project_iam_member" "clouddeploy_sa" {
   for_each = toset(local.clouddeploy_roles)
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${local.clouddeploy_sa_email}"
+
+  depends_on = [google_service_account.clouddeploy_runner]
+}
+
+resource "google_project_iam_member" "clouddeploy_sa_build" {
+  for_each = toset(local.cloudbuild_trigger_roles)
 
   project = var.project_id
   role    = each.value

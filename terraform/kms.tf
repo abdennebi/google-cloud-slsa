@@ -41,3 +41,18 @@ resource "google_kms_crypto_key_iam_member" "cloudbuild_viewer" {
   role          = "roles/cloudkms.viewer"
   member        = "serviceAccount:${local.cloud_build_sa_email}"
 }
+
+# ---------------------------------------------------------------------------
+# KMS IAM – clouddeploy-runner SA (utilisé par le trigger Cloud Build)
+# ---------------------------------------------------------------------------
+resource "google_kms_crypto_key_iam_member" "clouddeploy_runner_signer_verifier" {
+  crypto_key_id = google_kms_crypto_key.binauthz_signer.id
+  role          = "roles/cloudkms.signerVerifier"
+  member        = "serviceAccount:${local.clouddeploy_sa_email}"
+}
+
+resource "google_kms_crypto_key_iam_member" "clouddeploy_runner_viewer" {
+  crypto_key_id = google_kms_crypto_key.binauthz_signer.id
+  role          = "roles/cloudkms.viewer"
+  member        = "serviceAccount:${local.clouddeploy_sa_email}"
+}

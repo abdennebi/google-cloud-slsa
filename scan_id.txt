@@ -1,0 +1,16 @@
+Collecting cryptography==42.0.7
+  Downloading https://github.com/googleapis/enterprise-certificate-proxy/releases/download/v0.3.6/cryptography-42.0.7-cp39-abi3-macosx_10_12_universal2.whl (5.6 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.6/5.6 MB 37.7 MB/s  0:00:00
+Requirement already satisfied: crcmod in /Users/abdennebi/.config/gcloud/virtenv/lib/python3.13/site-packages (1.7)
+Requirement already satisfied: grpcio in /Users/abdennebi/.config/gcloud/virtenv/lib/python3.13/site-packages (1.78.0)
+Requirement already satisfied: pyopenssl==24.2.1 in /Users/abdennebi/.config/gcloud/virtenv/lib/python3.13/site-packages (24.2.1)
+Requirement already satisfied: google_crc32c in /Users/abdennebi/.config/gcloud/virtenv/lib/python3.13/site-packages (1.8.0)
+Requirement already satisfied: certifi in /Users/abdennebi/.config/gcloud/virtenv/lib/python3.13/site-packages (2026.2.25)
+Requirement already satisfied: setuptools in /Users/abdennebi/.config/gcloud/virtenv/lib/python3.13/site-packages (82.0.1)
+Requirement already satisfied: cffi>=1.12 in /Users/abdennebi/.config/gcloud/virtenv/lib/python3.13/site-packages (from cryptography==42.0.7) (2.0.0)
+Requirement already satisfied: typing-extensions~=4.12 in /Users/abdennebi/.config/gcloud/virtenv/lib/python3.13/site-packages (from grpcio) (4.15.0)
+Requirement already satisfied: pycparser in /Users/abdennebi/.config/gcloud/virtenv/lib/python3.13/site-packages (from cffi>=1.12->cryptography==42.0.7) (3.0)
+
+Google Cloud CLI works best with Python 3.13 and certain modules.
+
+Setting up virtual environment

@@ -7,6 +7,8 @@ substitutions:
   _REPO_NAME: google-cloud-slsa
   _TAG_NAME: latest
   _VULN_ATTESTOR_ID: vulnz-attestor
+  _GCB_ATTESTOR_ID: built-by-cloud-build
+  _SBOM_ATTESTOR_ID: sbom-attestor
   _KMS_RING_NAME: binauthz
   _KMS_KEY_NAME: binauthz-signer
   _KMS_KEY_VERSION: "1"
@@ -15,7 +17,7 @@ steps:
 
   # Go test
   - id: test
-    name: golang@sha256:f55a6ec7f24aedc1ed66e2641fdc52de01f2d24d6e49d1fa38582c07dd5f601d
+    name: golang@sha256:8cd78ec5a59bf58b6d2d72e2565bece318ef43563977929512e1dbee9085f7e4
     env:
     - GO111MODULE=on
     entrypoint: /bin/bash
@@ -93,12 +95,50 @@ steps:
         --attestor="projects/${PROJECT_ID}/attestors/${_VULN_ATTESTOR_ID}" \
         --keyversion="projects/${PROJECT_ID}/locations/${_LOCATION}/keyRings/${_KMS_RING_NAME}/cryptoKeys/${_KMS_KEY_NAME}/cryptoKeyVersions/${_KMS_KEY_VERSION}"
 
+  # Attest image – Built by Cloud Build
+  - id: attest-gcb
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    waitFor:
+    - attest-vulnz
+    dir: app
+    args:
+    - -c
+    - |
+      gcloud beta container binauthz attestations sign-and-create \
+        --artifact-url="$(cat image-digest.txt)" \
+        --attestor="projects/${PROJECT_ID}/attestors/${_GCB_ATTESTOR_ID}" \
+        --keyversion="projects/${PROJECT_ID}/locations/${_LOCATION}/keyRings/${_KMS_RING_NAME}/cryptoKeys/${_KMS_KEY_NAME}/cryptoKeyVersions/${_KMS_KEY_VERSION}"
+
+  # Generate SBOM and attest
+  - id: attest-sbom
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    waitFor:
+    - attest-vulnz
+    dir: app
+    args:
+    - -c
+    - |
+      # Generate SBOM using syft via gcloud artifacts sbom export (On-Demand Scanning)
+      gcloud artifacts sbom export \
+        --uri="$(cat image-digest.txt)" \
+        --destination="/workspace/sbom.json" \
+        --project=${PROJECT_ID} || true
+
+      # Sign and create SBOM attestation
+      gcloud beta container binauthz attestations sign-and-create \
+        --artifact-url="$(cat image-digest.txt)" \
+        --attestor="projects/${PROJECT_ID}/attestors/${_SBOM_ATTESTOR_ID}" \
+        --keyversion="projects/${PROJECT_ID}/locations/${_LOCATION}/keyRings/${_KMS_RING_NAME}/cryptoKeys/${_KMS_KEY_NAME}/cryptoKeyVersions/${_KMS_KEY_VERSION}"
+
   # Create release in Google Cloud Deploy
   - id: release
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: /bin/bash
     waitFor:
-    - attest-vulnz
+    - attest-gcb
+    - attest-sbom
     dir: app
     args:
     - -c
