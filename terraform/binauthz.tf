@@ -139,3 +139,36 @@ resource "google_binary_authorization_policy" "policy" {
 
   depends_on = [google_binary_authorization_attestor.attestors]
 }
+
+# ---------------------------------------------------------------------------
+# GKE Continuous Validation – Check-based Policy
+# ---------------------------------------------------------------------------
+resource "terraform_data" "continuous_validation_policy" {
+  input = var.project_id
+
+  triggers_replace = [
+    filesha256("${path.module}/../doc/continuous-validation-policy.yaml")
+  ]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      gcloud beta container binauthz policy create check-based-policy-demo \
+        --platform=gke \
+        --policy-file=${path.module}/../doc/continuous-validation-policy.yaml \
+        --project=${self.input} \
+        || gcloud beta container binauthz policy update check-based-policy-demo \
+        --platform=gke \
+        --policy-file=${path.module}/../doc/continuous-validation-policy.yaml \
+        --project=${self.input}
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "gcloud beta container binauthz policy delete check-based-policy-demo --platform=gke --project=${self.input} --quiet || true"
+  }
+
+  depends_on = [
+    google_project_service.apis
+  ]
+}
