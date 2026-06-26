@@ -1,16 +1,20 @@
 # BUILD stage
-FROM python:3.13-slim AS builder
+FROM python:3.13-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies into a prefix for easy copy
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+# Install uv
+RUN pip install --no-cache-dir uv
+
+# Install dependencies from uv lockfile
+COPY pyproject.toml uv.lock ./
+RUN uv export --format requirements-txt --no-dev -o requirements.txt && \
+    uv pip install --system --no-cache --prefix=/install -r requirements.txt
 
 COPY main.py .
 
-# RUN stage — use distroless Python image
-FROM gcr.io/distroless/python3-debian12
+# RUN stage — use Python Alpine image for minimal footprint and low CVEs
+FROM python:3.13-alpine
 
 ARG VERSION=v0.0.1-default
 LABEL devo.version="${VERSION}"
@@ -27,5 +31,4 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-# distroless Python: call python directly
 ENTRYPOINT ["python", "main.py"]
