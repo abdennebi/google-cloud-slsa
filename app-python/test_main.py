@@ -1,3 +1,6 @@
+import os
+os.environ["APP_ENV"] = "development"
+
 from fastapi.testclient import TestClient
 from main import app
 
@@ -19,6 +22,9 @@ def test_ping():
 
 
 def test_options():
-    response = client.options("/")
+    response = client.options("/", headers={
+        "Origin": "http://localhost",
+        "Access-Control-Request-Method": "GET"
+    })
     assert response.status_code == 200
-    assert response.headers.get("access-control-allow-origin") == "*"
+    assert response.headers.get("access-control-allow-origin") == "http://localhost"
