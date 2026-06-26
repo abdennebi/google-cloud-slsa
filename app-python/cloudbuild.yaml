@@ -146,7 +146,6 @@ steps:
     waitFor:
     - attest-gcb
     - attest-sbom
-    dir: app-python
     args:
     - -c
     - |
@@ -159,7 +158,7 @@ steps:
       --delivery-pipeline ${_PIPELINE_NAME} \
       --region ${_LOCATION} \
       --annotations "commitId=${REVISION_ID},tag=${_TAG_NAME}" \
-      --images "${_APP_NAME}=$(cat image-digest.txt)"
+      --images "${_APP_NAME}=$(cat app-python/image-digest.txt)"
 
 images:
 - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_APP_NAME:${_TAG_NAME}
