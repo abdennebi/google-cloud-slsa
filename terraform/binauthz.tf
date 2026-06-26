@@ -92,24 +92,15 @@ data "google_kms_crypto_key_version" "binauthz_v1" {
 # ---------------------------------------------------------------------------
 # Attestor IAM – Cloud Build SA: attestorsViewer
 # Mirrors: gcloud container binauthz attestors add-iam-policy-binding in attestor.sh
-# Note: Uses local-exec via gcloud to avoid ADC quota-project issue with
-# the google_binary_authorization_attestor_iam_member resource.
 # ---------------------------------------------------------------------------
-resource "terraform_data" "cb_viewer_binauthz" {
+resource "google_binary_authorization_attestor_iam_member" "cb_viewer_binauthz" {
   for_each = local.attestor_ids
 
-  input = "${var.project_id}/${each.value}/${local.cloud_build_sa_email}"
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      gcloud container binauthz attestors add-iam-policy-binding ${each.value} \
-        --project ${var.project_id} \
-        --member "serviceAccount:${local.cloud_build_sa_email}" \
-        --role "roles/binaryauthorization.attestorsViewer"
-    EOT
-  }
-
-  depends_on = [google_binary_authorization_attestor.attestors]
+  provider = google.with_quota
+  project  = var.project_id
+  attestor = google_binary_authorization_attestor.attestors[each.key].name
+  role     = "roles/binaryauthorization.attestorsViewer"
+  member   = "serviceAccount:${local.cloud_build_sa_email}"
 }
 
 # ---------------------------------------------------------------------------
@@ -127,7 +118,7 @@ resource "google_binary_authorization_policy" "policy" {
 
   # prod cluster
   cluster_admission_rules {
-    cluster                 = "${local.cluster_zone}.${var.cluster_name}-prod"
+    cluster                 = "${var.region}.${var.cluster_name}-prod"
     enforcement_mode        = "ENFORCED_BLOCK_AND_AUDIT_LOG"
     evaluation_mode         = "REQUIRE_ATTESTATION"
     require_attestations_by = [for k, v in local.attestor_ids : google_binary_authorization_attestor.attestors[k].name]
@@ -135,7 +126,7 @@ resource "google_binary_authorization_policy" "policy" {
 
   # test cluster
   cluster_admission_rules {
-    cluster                 = "${local.cluster_zone}.${var.cluster_name}-test"
+    cluster                 = "${var.region}.${var.cluster_name}-test"
     enforcement_mode        = "ENFORCED_BLOCK_AND_AUDIT_LOG"
     evaluation_mode         = "REQUIRE_ATTESTATION"
     require_attestations_by = [for k, v in local.attestor_ids : google_binary_authorization_attestor.attestors[k].name]

@@ -32,6 +32,17 @@ provider "google-beta" {
   region  = var.region
 }
 
+# Provider alias requis pour binaryauthorization.googleapis.com :
+# cette API exige le header X-Goog-User-Project avec les ADC utilisateur,
+# indépendamment du champ `project` dans la ressource.
+provider "google" {
+  alias                 = "with_quota"
+  project               = var.project_id
+  region                = var.region
+  billing_project       = var.project_id
+  user_project_override = true
+}
+
 # ---------------------------------------------------------------------------
 # Derived locals (mirrors config.sh)
 # ---------------------------------------------------------------------------

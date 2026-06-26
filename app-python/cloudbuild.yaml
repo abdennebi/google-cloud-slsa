@@ -1,0 +1,167 @@
+# Overview: Cloud Build build pipeline with Cloud Deploy release using git tag.
+
+substitutions:
+  _APP_NAME: hello
+  _PIPELINE_NAME: deploy-demo-pipeline
+  _LOCATION: europe-west1
+  _REPO_NAME: google-cloud-slsa
+  _TAG_NAME: latest
+  _VULN_ATTESTOR_ID: vulnz-attestor
+  _GCB_ATTESTOR_ID: built-by-cloud-build
+  _SBOM_ATTESTOR_ID: sbom-attestor
+  _KMS_RING_NAME: binauthz
+  _KMS_KEY_NAME: binauthz-signer
+  _KMS_KEY_VERSION: "1"
+
+steps:
+
+  # Python test
+  - id: test
+    name: python:3.13-slim
+    entrypoint: /bin/bash
+    dir: app-python
+    args:
+    - -c
+    - |
+      pip install --no-cache-dir -r requirements.txt
+      pytest test_main.py -v --tb=short
+
+  # Build image
+  - id: build
+    name: gcr.io/cloud-builders/docker@sha256:1fe0557459fea8552d5ce57bb77aaf238139bd69131d670e152e68358f6cb13c
+    entrypoint: /bin/bash
+    waitFor:
+    - test
+    dir: app-python
+    args:
+    - -c
+    - |
+      docker build --build-arg VERSION=${_TAG_NAME} \
+        -t "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}" \
+        .
+
+  # Publish image, get digest, and save it to file.
+  # Digest because tags aren't (really) cryptographically verifiable.
+  - id: publish
+    name: gcr.io/cloud-builders/docker@sha256:1fe0557459fea8552d5ce57bb77aaf238139bd69131d670e152e68358f6cb13c
+    entrypoint: /bin/bash
+    waitFor:
+    - build
+    dir: app-python
+    args:
+    - -c
+    - |-
+      docker push "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}"
+      docker image inspect "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}" \
+        --format '{{index .RepoDigests 0}}' > image-digest.txt
+      cat image-digest.txt
+
+  # Vulnerability Scan
+  - id: scan
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    waitFor:
+    - publish
+    dir: app-python
+    args:
+    - -c
+    - |
+      gcloud artifacts docker images scan "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}" \
+        --format='value(response.scan)' > /workspace/scan_id.txt
+
+  # Attest image with BinAuthz (Vulnerability Attestation)
+  - id: attest-vulnz
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    waitFor:
+    - scan
+    dir: app-python
+    args:
+    - -c
+    - |
+      # Check scan results for CRITICAL or HIGH vulnerabilities
+      VULNZ=$(gcloud artifacts docker images list-vulnerabilities $(cat /workspace/scan_id.txt) \
+        --format="value(vulnerability.effectiveSeverity)" | grep -E "CRITICAL|HIGH" | wc -l)
+
+      if [ "$${VULNZ}" -gt 0 ]; then
+        echo "Scan failed: $${VULNZ} HIGH/CRITICAL vulnerabilities found."
+        exit 1
+      fi
+
+      # Sign and create BinAuthz attestation
+      gcloud beta container binauthz attestations sign-and-create \
+        --artifact-url="$(cat image-digest.txt)" \
+        --attestor="projects/${PROJECT_ID}/attestors/${_VULN_ATTESTOR_ID}" \
+        --keyversion="${_KMS_KEY_NAME}"
+
+  # Attest image – Built by Cloud Build
+  - id: attest-gcb
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    waitFor:
+    - attest-vulnz
+    dir: app-python
+    args:
+    - -c
+    - |
+      gcloud beta container binauthz attestations sign-and-create \
+        --artifact-url="$(cat image-digest.txt)" \
+        --attestor="projects/${PROJECT_ID}/attestors/${_GCB_ATTESTOR_ID}" \
+        --keyversion="${_KMS_KEY_NAME}"
+
+  # Generate SBOM and attest
+  - id: attest-sbom
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    waitFor:
+    - attest-vulnz
+    dir: app-python
+    args:
+    - -c
+    - |
+      # Generate SBOM using gcloud artifacts sbom export (On-Demand Scanning)
+      gcloud artifacts sbom export \
+        --uri="$(cat image-digest.txt)" \
+        --destination="/workspace/sbom.json" \
+        --project=${PROJECT_ID} || true
+
+      # Sign and create SBOM attestation
+      gcloud beta container binauthz attestations sign-and-create \
+        --artifact-url="$(cat image-digest.txt)" \
+        --attestor="projects/${PROJECT_ID}/attestors/${_SBOM_ATTESTOR_ID}" \
+        --keyversion="${_KMS_KEY_NAME}"
+
+  # Create release in Google Cloud Deploy
+  - id: release
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    waitFor:
+    - attest-gcb
+    - attest-sbom
+    dir: app-python
+    args:
+    - -c
+    - |
+      CLEAN_TAG=$$(echo ${_TAG_NAME} | sed 's/\./-/g')
+      SUFFIX="${SHORT_SHA}"
+      if [ -z "$${SUFFIX}" ]; then
+        SUFFIX=$$(echo ${BUILD_ID} | cut -c1-8)
+      fi
+      gcloud deploy releases create rel-$${CLEAN_TAG}-$${SUFFIX} \
+      --delivery-pipeline ${_PIPELINE_NAME} \
+      --region ${_LOCATION} \
+      --annotations "commitId=${REVISION_ID},tag=${_TAG_NAME}" \
+      --images "${_APP_NAME}=$(cat image-digest.txt)"
+
+images:
+- ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_APP_NAME:${_TAG_NAME}
+
+options:
+  # Verify generation of attestations and provenance metadata for this build.
+  # Otherwise, GCB generates provenance for global builds only.
+  requestedVerifyOption: VERIFIED
+  sourceProvenanceHash: ["SHA256"]
+  logging: CLOUD_LOGGING_ONLY
+
+tags:
+- demo

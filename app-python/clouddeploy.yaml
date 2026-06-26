@@ -1,0 +1,28 @@
+apiVersion: deploy.cloud.google.com/v1
+kind: DeliveryPipeline
+metadata:
+  name: deploy-demo-pipeline
+description: Security-focused CI/CD pipeline on GCP
+serialPipeline:
+ stages:
+ - targetId: hello-test
+ - targetId: hello-prod
+---
+
+apiVersion: deploy.cloud.google.com/v1
+kind: Target
+metadata:
+  name: hello-test
+description: test cluster
+gke:
+  cluster: projects/lcl-acdc-sbox-e3e1/locations/europe-west1-b/clusters/hello-test
+---
+
+apiVersion: deploy.cloud.google.com/v1
+kind: Target
+metadata:
+  name: hello-prod
+description: prod cluster
+requireApproval: true
+gke:
+  cluster: projects/lcl-acdc-sbox-e3e1/locations/europe-west1-b/clusters/hello-prod
