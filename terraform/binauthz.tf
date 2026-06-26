@@ -142,27 +142,28 @@ resource "google_binary_authorization_policy" "policy" {
 
 data "google_client_config" "default" {}
 
-# ---------------------------------------------------------------------------
-# GKE Continuous Validation – Check-based Policy
-# ---------------------------------------------------------------------------
-resource "terracurl_request" "continuous_validation_policy" {
-  name           = "check-based-policy-demo"
-  url            = "https://binaryauthorization.googleapis.com/v1/projects/${var.project_id}/platforms/gke/policies/check-based-policy-demo"
-  method         = "PUT"
-  request_body   = file("${path.module}/../doc/continuous-validation-policy.json")
+provider "restapi" {
+  uri                  = "https://binaryauthorization.googleapis.com"
+  write_returns_object = true
   headers = {
     Authorization = "Bearer ${data.google_client_config.default.access_token}"
     Content-Type  = "application/json"
   }
+}
 
-  destroy_url            = "https://binaryauthorization.googleapis.com/v1/projects/${var.project_id}/platforms/gke/policies/check-based-policy-demo"
-  destroy_method         = "DELETE"
-  destroy_headers = {
-    Authorization = "Bearer ${data.google_client_config.default.access_token}"
-  }
-
-  response_codes         = [200, 201]
-  destroy_response_codes = [200, 204]
+# ---------------------------------------------------------------------------
+# GKE Continuous Validation – Check-based Policy
+# ---------------------------------------------------------------------------
+resource "restapi_object" "continuous_validation_policy" {
+  path           = "/v1/projects/${var.project_id}/platforms/gke/policies"
+  create_path    = "/v1/projects/${var.project_id}/platforms/gke/policies?policyId=check-based-policy-demo"
+  read_path      = "/v1/projects/${var.project_id}/platforms/gke/policies/check-based-policy-demo"
+  update_path    = "/v1/projects/${var.project_id}/platforms/gke/policies/check-based-policy-demo"
+  destroy_path   = "/v1/projects/${var.project_id}/platforms/gke/policies/check-based-policy-demo"
+  update_method  = "PUT"
+  destroy_method = "DELETE"
+  data           = file("${path.module}/../doc/continuous-validation-policy.json")
+  id_attribute   = "name"
 
   depends_on = [
     google_project_service.apis
