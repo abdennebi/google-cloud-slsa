@@ -1,6 +1,5 @@
 # ---------------------------------------------------------------------------
 # KMS – Key ring + asymmetric signing key
-# Mirrors the KMS section in init.sh and the key binding in attestor.sh
 # ---------------------------------------------------------------------------
 resource "google_kms_key_ring" "binauthz" {
   project  = var.project_id

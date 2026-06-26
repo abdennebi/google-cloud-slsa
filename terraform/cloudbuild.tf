@@ -1,6 +1,5 @@
 # ---------------------------------------------------------------------------
 # Cloud Build trigger
-# Mirrors setup/trigger.sh
 #
 # IMPORTANT LIMITATION: The trigger uses `github` source type which requires
 # a pre-existing GitHub App connection set up manually in the GCP Console.

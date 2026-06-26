@@ -1,6 +1,5 @@
 # ---------------------------------------------------------------------------
 # Cloud Deploy – Delivery pipeline + targets
-# Mirrors app/clouddeploy.yaml
 # ---------------------------------------------------------------------------
 
 resource "google_clouddeploy_delivery_pipeline" "demo" {

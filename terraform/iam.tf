@@ -1,6 +1,5 @@
 # ---------------------------------------------------------------------------
 # IAM – Cloud Build service account
-# Mirrors the `cloudbuild_roles` loop in init.sh
 # ---------------------------------------------------------------------------
 locals {
   cloudbuild_roles = [

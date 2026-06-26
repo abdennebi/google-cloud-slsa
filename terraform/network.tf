@@ -1,6 +1,5 @@
 # ---------------------------------------------------------------------------
 # VPC – default network + subnet europe-west1
-# Ce projet sandbox n'a pas de VPC default ; on le crée pour les clusters GKE.
 # ---------------------------------------------------------------------------
 resource "google_compute_network" "default" {
   project                 = var.project_id

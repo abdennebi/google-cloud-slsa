@@ -1,6 +1,5 @@
 # ---------------------------------------------------------------------------
 # Binary Authorization – Container Analysis notes + attestors
-# Mirrors setup/attestor.sh (called 3× from binauthz.sh)
 #
 # NOTE: The `google_binary_authorization_attestor` resource manages the
 # BinAuthz attestor and its PKIX key binding natively. The Container Analysis

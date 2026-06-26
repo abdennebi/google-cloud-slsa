@@ -1,7 +1,3 @@
-# ---------------------------------------------------------------------------
-# Artifact Registry – Docker repository
-# Mirrors: gcloud artifacts repositories create in init.sh
-# ---------------------------------------------------------------------------
 resource "google_artifact_registry_repository" "docker_repo" {
   project       = var.project_id
   location      = var.region
