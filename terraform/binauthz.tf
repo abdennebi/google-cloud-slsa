@@ -140,33 +140,29 @@ resource "google_binary_authorization_policy" "policy" {
   depends_on = [google_binary_authorization_attestor.attestors]
 }
 
+data "google_client_config" "default" {}
+
 # ---------------------------------------------------------------------------
 # GKE Continuous Validation – Check-based Policy
 # ---------------------------------------------------------------------------
-resource "terraform_data" "continuous_validation_policy" {
-  input = var.project_id
-
-  triggers_replace = [
-    filesha256("${path.module}/../doc/continuous-validation-policy.yaml")
-  ]
-
-  provisioner "local-exec" {
-    command = <<EOT
-      gcloud beta container binauthz policy create check-based-policy-demo \
-        --platform=gke \
-        --policy-file=${path.module}/../doc/continuous-validation-policy.yaml \
-        --project=${self.input} \
-        || gcloud beta container binauthz policy update check-based-policy-demo \
-        --platform=gke \
-        --policy-file=${path.module}/../doc/continuous-validation-policy.yaml \
-        --project=${self.input}
-    EOT
+resource "terracurl_request" "continuous_validation_policy" {
+  name           = "check-based-policy-demo"
+  url            = "https://binaryauthorization.googleapis.com/v1/projects/${var.project_id}/platforms/gke/policies/check-based-policy-demo"
+  method         = "PUT"
+  request_body   = file("${path.module}/../doc/continuous-validation-policy.json")
+  headers = {
+    Authorization = "Bearer ${data.google_client_config.default.access_token}"
+    Content-Type  = "application/json"
   }
 
-  provisioner "local-exec" {
-    when    = destroy
-    command = "gcloud beta container binauthz policy delete check-based-policy-demo --platform=gke --project=${self.input} --quiet || true"
+  destroy_url            = "https://binaryauthorization.googleapis.com/v1/projects/${var.project_id}/platforms/gke/policies/check-based-policy-demo"
+  destroy_method         = "DELETE"
+  destroy_headers = {
+    Authorization = "Bearer ${data.google_client_config.default.access_token}"
   }
+
+  response_codes         = [200, 201]
+  destroy_response_codes = [200, 204]
 
   depends_on = [
     google_project_service.apis

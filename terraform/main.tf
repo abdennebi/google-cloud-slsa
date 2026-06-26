@@ -19,6 +19,10 @@ terraform {
       source  = "hashicorp/time"
       version = "0.13.1"
     }
+    terracurl = {
+      source  = "devops-rob/terracurl"
+      version = "1.2.1"
+    }
   }
 }
 

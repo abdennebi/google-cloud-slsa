@@ -1,0 +1,78 @@
+{
+  "gkePolicy": {
+    "imageAllowlist": {
+      "allowPattern": [
+        "us.gcr.io/google-containers/**",
+        "gcr.io/google_containers/**",
+        "gcr.io/stackdriver-agents/**",
+        "gke.gcr.io/**"
+      ]
+    },
+    "checkSets": [
+      {
+        "displayName": "Demo check set",
+        "scope": {
+          "kubernetesNamespace": "default"
+        },
+        "imageAllowlist": {
+          "allowPattern": [
+            "us-west1-docker.pkg.dev/cloudy-demos/*",
+            "us-docker.pkg.dev/cloudy-demos/*"
+          ]
+        },
+        "checks": [
+          {
+            "displayName": "SLSA check",
+            "slsaCheck": {
+              "rules": [
+                {
+                  "attestationSource": {
+                    "containerAnalysisAttestationProjects": [
+                      "projects/k8s-istio-playground"
+                    ]
+                  },
+                  "configBasedBuildRequired": true,
+                  "trustedBuilder": "GOOGLE_CLOUD_BUILD",
+                  "trustedSourceRepoPatterns": [
+                    "github.com/abdennebi/google-cloud-slsa"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "displayName": "Vulnerability check",
+            "vulnerabilityCheck": {
+              "maximumFixableSeverity": "LOW",
+              "maximumUnfixableSeverity": "MEDIUM",
+              "allowedCves": [
+                "CVE-2020-29511",
+                "CVE-2020-29509"
+              ],
+              "containerAnalysisVulnerabilityProjects": [
+                "projects/goog-vulnz"
+              ]
+            }
+          },
+          {
+            "displayName": "Image freshness check",
+            "imageFreshnessCheck": {
+              "maxUploadAgeDays": 30
+            }
+          },
+          {
+            "alwaysDeny": false
+          }
+        ]
+      },
+      {
+        "displayName": "Default check set",
+        "checks": [
+          {
+            "alwaysDeny": true
+          }
+        ]
+      }
+    ]
+  }
+}
