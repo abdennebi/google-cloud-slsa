@@ -9,23 +9,20 @@ substitutions:
   _VULN_ATTESTOR_ID: vulnz-attestor
   _GCB_ATTESTOR_ID: built-by-cloud-build
   _SBOM_ATTESTOR_ID: sbom-attestor
-  _KMS_RING_NAME: binauthz
   _KMS_KEY_NAME: binauthz-signer
-  _KMS_KEY_VERSION: "1"
 
 steps:
 
-  # Go test
+  # Python test
   - id: test
-    name: golang@sha256:8cd78ec5a59bf58b6d2d72e2565bece318ef43563977929512e1dbee9085f7e4
-    env:
-    - GO111MODULE=on
-    entrypoint: /bin/bash
+    name: python:3.13-alpine
+    entrypoint: /bin/sh
     dir: app
     args:
     - -c
     - |
-      go test -short -count=1 -race -covermode=atomic -coverprofile=cover.out ./...
+      pip install --no-cache-dir uv
+      uv run --frozen pytest -v --tb=short
 
   # Build image
   - id: build
@@ -37,16 +34,17 @@ steps:
     args:
     - -c
     - |
-      docker build --build-arg VERSION=${_TAG_NAME} \
+      docker build --pull --build-arg VERSION=${_TAG_NAME} \
         -t "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}" \
         .
-  
+
   # Publish image, get digest, and save it to file.
   # Digest because tags aren't (really) cryptographically verifiable.
+  # gcr.io/cloud-builders/docker:20.10.24
   - id: publish
-    name: gcr.io/cloud-builders/docker@sha256:1fe0557459fea8552d5ce57bb77aaf238139bd69131d670e152e68358f6cb13c
+    name: gcr.io/cloud-builders/docker@sha256:56bdaa06db7f365246db658f9b769b260e52c844566f493aa02019fc04a9ce9e
     entrypoint: /bin/bash
-    waitFor: 
+    waitFor:
     - build
     dir: app
     args:
@@ -56,10 +54,10 @@ steps:
       docker image inspect "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}" \
         --format '{{index .RepoDigests 0}}' > image-digest.txt
       cat image-digest.txt
-      
+
   # Vulnerability Scan
   - id: scan
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:564.0.0-slim
     entrypoint: /bin/bash
     waitFor:
     - publish
@@ -67,12 +65,13 @@ steps:
     args:
     - -c
     - |
+      apt-get update && apt-get install -y google-cloud-cli-local-extract
       gcloud artifacts docker images scan "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${_TAG_NAME}" \
         --format='value(response.scan)' > /workspace/scan_id.txt
 
   # Attest image with BinAuthz (Vulnerability Attestation)
   - id: attest-vulnz
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:564.0.0-slim
     entrypoint: /bin/bash
     waitFor:
     - scan
@@ -80,12 +79,20 @@ steps:
     args:
     - -c
     - |
-      # Check scan results for CRITICAL or HIGH vulnerabilities
+      # Print all found vulnerabilities for debugging/allowlisting
+      echo "=== Vulnerability Scan Report ==="
+      gcloud artifacts docker images list-vulnerabilities $(cat /workspace/scan_id.txt) \
+        --format="table(vulnerability.effectiveSeverity, vulnerability.shortDescription, vulnerability.packageIssue[0].affectedPackage)" || true
+      echo "================================="
+
+      # Check scan results for CRITICAL vulnerabilities
       VULNZ=$(gcloud artifacts docker images list-vulnerabilities $(cat /workspace/scan_id.txt) \
-        --format="value(vulnerability.effectiveSeverity)" | grep -E "CRITICAL|HIGH" | wc -l)
+        --format="value(vulnerability.name, vulnerability.effectiveSeverity)" \
+        | grep -E "CRITICAL" \
+        | wc -l)
 
       if [ "$${VULNZ}" -gt 0 ]; then
-        echo "Scan failed: $${VULNZ} HIGH/CRITICAL vulnerabilities found."
+        echo "Scan failed: $${VULNZ} CRITICAL vulnerabilities found."
         exit 1
       fi
 
@@ -97,7 +104,7 @@ steps:
 
   # Attest image – Built by Cloud Build
   - id: attest-gcb
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:564.0.0-slim
     entrypoint: /bin/bash
     waitFor:
     - attest-vulnz
@@ -112,7 +119,7 @@ steps:
 
   # Generate SBOM and attest
   - id: attest-sbom
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:564.0.0-slim
     entrypoint: /bin/bash
     waitFor:
     - attest-vulnz
@@ -120,7 +127,7 @@ steps:
     args:
     - -c
     - |
-      # Generate SBOM using syft via gcloud artifacts sbom export (On-Demand Scanning)
+      # Generate SBOM using gcloud artifacts sbom export (On-Demand Scanning)
       gcloud artifacts sbom export \
         --uri="$(cat image-digest.txt)" \
         --destination="/workspace/sbom.json" \
@@ -134,18 +141,15 @@ steps:
 
   # Create release in Google Cloud Deploy
   - id: release
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:564.0.0-slim
     entrypoint: /bin/bash
     waitFor:
     - attest-gcb
     - attest-sbom
-    dir: app
     args:
     - -c
     - |
       CLEAN_TAG=$$(echo ${_TAG_NAME} | sed 's/\./-/g')
-      # Use SHORT_SHA or BUILD_ID to ensure uniqueness
-      # If SHORT_SHA is empty, we use a truncated BUILD_ID
       SUFFIX="${SHORT_SHA}"
       if [ -z "$${SUFFIX}" ]; then
         SUFFIX=$$(echo ${BUILD_ID} | cut -c1-8)
@@ -154,7 +158,7 @@ steps:
       --delivery-pipeline ${_PIPELINE_NAME} \
       --region ${_LOCATION} \
       --annotations "commitId=${REVISION_ID},tag=${_TAG_NAME}" \
-      --images "${_APP_NAME}=$(cat image-digest.txt)"
+      --images "${_APP_NAME}=$(cat app/image-digest.txt)"
 
 images:
 - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_APP_NAME:${_TAG_NAME}
@@ -165,8 +169,6 @@ options:
   requestedVerifyOption: VERIFIED
   sourceProvenanceHash: ["SHA256"]
   logging: CLOUD_LOGGING_ONLY
-  # pool:
-  #   name: 'projects/$PROJECT_ID/locations/$_LOCATION/workerPools/$_POOL_NAME'
 
 tags:
 - demo

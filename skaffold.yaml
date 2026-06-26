@@ -5,7 +5,7 @@ metadata:
 build:
   artifacts:
   - image: hello
-    context: app-python
+    context: app
     docker:
       dockerfile: Dockerfile
     sync:
